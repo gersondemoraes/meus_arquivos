@@ -1,0 +1,170 @@
+Sub AjeitaSQL()
+' Macro gravada 16/02/2022 por Moacir
+'
+' Finalidade: corrigir a sintaxe das queries geradas pelo Dbeaver:
+'   -Formata campos data e timestamp;
+'   -Quebra todas as linhas com mais de 69 caracteres
+'   -Adiciona uma linha em branco entre as querie.
+    
+    Dim Paragrafo            As Paragraph
+    Dim PosicaoUltimaVirgula As Byte
+    Dim CaracteresAcumulados As String
+    
+    'SELECIONA O TEXTO INTEIRO E ALTERA O FONTE
+    Selection.WholeStory
+    Selection.Font.Name = "Courier New"
+    Selection.Font.Size = 10
+
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    With Selection.Find
+        .Text = "TO_DATE("
+        .Replacement.Text = ""
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+    
+    'REMOVE ESPAÇOS DUPLICADOS
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    With Selection.Find
+        .Text = "  "
+        .Replacement.Text = " "
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.Execute Replace:=wdReplaceAll
+        
+    'CORRIGE FORMATO DOS VALORES TIMESTAMP
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    With Selection.Find
+        .Text = ",'YYYY-MM-DD HH24:MI:SS')"
+        .Replacement.Text = ""
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+    
+    'CORRIGE FORMATO DOS VALORES DATE
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    With Selection.Find
+        .Text = ",'YYYY-MM-DD')"
+        .Replacement.Text = ""
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+    
+    'ADICIONA UMA LINHA EM BRANCO ANTES DE CADA QUERY
+    Selection.HomeKey Unit:=wdStory
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    With Selection.Find
+        .Text = "INSERT "
+        .Replacement.Text = " ^pINSERT "
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+ 
+    'QUEBRA A LINHA APÓS A INSTRUÇÃO VALUES
+    With Selection.Find
+        .Text = "VALUES("
+        .Replacement.Text = "VALUES( ^p"
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+
+    'QUEBRA TODAS AS LINHAS QUE TEM MAIS DE 69 CARACTERES
+    'Cria a pasta C:\Temp se necessário
+    If Dir("C:\Temp", vbDirectory) = "" Then
+       MkDir ("C:\Temp")
+    End If
+    
+    'Exclui o arquivo de saída se já existir um
+    If Dir("C:\Temp\QUERIES.TXT") <> "" Then
+       Kill "C:\Temp\QUERIES.TXT"
+    End If
+    
+    Open "C:\Temp\QUERIES.TXT" For Output As #1
+    
+    For Each Paragrafo In ActiveDocument.Paragraphs
+        PosicaoUltimaVirgula = 0
+        CaracteresAcumulados = ""
+        
+        For PosicaoAtual = 1 To Len(Paragrafo.Range.Text)
+            CaracteresAcumulados = CaracteresAcumulados & Mid(Paragrafo.Range.Text, PosicaoAtual, 1)
+            If Mid(Paragrafo.Range.Text, PosicaoAtual, 2) = ", " Then
+                PosicaoUltimaVirgula = Len(CaracteresAcumulados)
+            End If
+            If Len(CaracteresAcumulados) = 69 Then
+                If Right(CaracteresAcumulados, 1) = "," Then
+                   CaracteresAcumulados = CaracteresAcumulados & " "
+                End If
+                Print #1, Left$(CaracteresAcumulados, PosicaoUltimaVirgula + 1)
+                CaracteresAcumulados = Right$(CaracteresAcumulados, Len(CaracteresAcumulados) - (PosicaoUltimaVirgula + 1))
+                PosicaoUltimaVirgula = 0
+            End If
+        Next
+        Print #1, CaracteresAcumulados
+    Next Paragrafo
+
+    Close #1
+    
+    'FECHA O DOC ORIGINAL, SEM SALVAR
+    ActiveDocument.Close SaveChanges:=wdDoNotSaveChanges
+    
+    'ABRE O ARQUIVO GERADO, EM UM NOVO DOC
+    Documents.Open FileName:="C:\Temp\QUERIES.TXT"
+    
+    MsgBox ("Concluído com sucesso." & vbCrLf & _
+            "Queries gravadas no arquivo C:\Temp\QUERIES.TXT")
+End Sub
+
