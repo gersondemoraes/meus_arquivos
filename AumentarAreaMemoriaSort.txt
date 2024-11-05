@@ -1,0 +1,5 @@
+//SORT006      EXEC PGM=SORT                    
+//$ORTPARM     DD *                             
+VSCORET=128M,VSCORE=8M                         
+OPTION DSPSIZE=MAX,HIPRMAX=OPTIMAL,MAINSIZE=MAX
+/*                                              
